@@ -1,17 +1,34 @@
 fun main() {
-    data class StageMapElement(val startOut: Long, val startIn: Long, val length: Long)
-    data class Stage(val nameIn: String, val nameOut: String, val mapElements: List<StageMapElement>)
+    data class StageMapElement(val startDest: Long, val startSource: Long, val length: Long)
+
+    data class Stage(val nameSource: String, val nameDest: String, val mapElements: List<StageMapElement>) {
+        fun getOffsetBySource(source: Long) = mapElements
+            .filter { source in it.startSource until it.startSource + it.length }
+            .map { it.startDest - it.startSource }
+            .firstOrNull() ?: 0
+
+        fun getOffsetByDest(dest: Long) = mapElements
+            .filter { dest in it.startDest until it.startDest + it.length }
+            .map { it.startDest - it.startSource }
+            .firstOrNull() ?: 0
+    }
+
     class Router(val stages: List<Stage>) {
         fun route(origValue: Long): Long {
             var currentValue = origValue
             for (stage in stages) {
-                val offset = stage.mapElements
-                    .filter { currentValue in it.startIn until it.startIn + it.length }
-                    .map { it.startOut - it.startIn }
-                    .firstOrNull() ?: 0
-                currentValue += offset
+                currentValue += stage.getOffsetBySource(currentValue)
             }
             return currentValue
+        }
+
+        fun getEdgeCases(): Set<Long> {
+            var edgeCases = setOf<Long>()
+            for (stage in stages.reversed()) {
+                val newEdgeCases = stage.mapElements.flatMap { listOf(it.startSource, it.startSource + it.length - 1) }.toSet()
+                edgeCases = newEdgeCases + edgeCases.map { it - stage.getOffsetByDest(it) }
+            }
+            return edgeCases
         }
     }
 
@@ -37,12 +54,12 @@ fun main() {
             input.subList(it[0] + 1, if (it.count() == 1) input.lastIndex else it[1])
         }.map { parseBlock(it) }
 
-        val sortedStages = stages.filter { it.nameIn == "seed" }.toMutableList()
-        var nextInName = sortedStages.first().nameOut
+        val sortedStages = stages.filter { it.nameSource == "seed" }.toMutableList()
+        var nextInName = sortedStages.first().nameDest
         while (nextInName != "location") {
-            val selectedStage = stages.first { it.nameIn == nextInName }
+            val selectedStage = stages.first { it.nameSource == nextInName }
             sortedStages.add(selectedStage)
-            nextInName = selectedStage.nameOut
+            nextInName = selectedStage.nameDest
         }
         return Pair(seedValues, Router(sortedStages))
     }
@@ -55,15 +72,20 @@ fun main() {
 
     fun part2(input: List<String>): Long {
         val (seedRanges, router) = parseInput(input)
-        val seedValues = seedRanges
-            .asSequence()
+        val seedValueBoundaries = seedRanges
             .windowed(2)
             .withIndex()
-            .flatMap { it.value[0]..it.value[0] + it.value[1] }
-        return seedValues.minOfOrNull { router.route(it) }!!
+            .filter { it.index % 2 == 0 }
+            .map { Pair(it.value[0], it.value[0] + it.value[1]) }
+        val routerEdgeCases = router.getEdgeCases()
+            .filter { source ->
+                seedValueBoundaries.any { source in it.first..it.second }
+            }
+        val seedsToAnalyze = routerEdgeCases + seedValueBoundaries.flatMap { listOf(it.first, it.second) }
+        return seedsToAnalyze.minOfOrNull { router.route(it) }!!
     }
 
-    // test if implementation meets criteria from the description, like:
+// test if implementation meets criteria from the description, like:
     val testInput = readInput("Day05_test")
     check(part1(testInput) == 35L) { "Wrong solution: ${part1(testInput)}" }
     check(part2(testInput) == 46L) { "Wrong solution: ${part2(testInput)}" }
