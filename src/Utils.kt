@@ -3,6 +3,8 @@ import java.security.MessageDigest
 import kotlin.io.path.Path
 import kotlin.io.path.readLines
 
+val numberRegex = Regex("""\d+""")
+
 /**
  * Reads lines from the given input txt file.
  */
