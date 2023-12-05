@@ -4,7 +4,7 @@ fun main() {
     }
 
     fun part2(input: List<String>): Int {
-        return input.size
+        return part1(input)
     }
 
     // test if implementation meets criteria from the description, like:
@@ -12,7 +12,7 @@ fun main() {
     check(part1(testInput) == 1) { "Wrong solution: ${part1(testInput)}" }
     check(part2(testInput) == 1) { "Wrong solution: ${part2(testInput)}" }
 
-    val input = readInput("Day01")
+    val input = readInput("DayXX")
     part1(input).println()
     part2(input).println()
 }
