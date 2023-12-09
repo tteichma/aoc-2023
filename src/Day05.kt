@@ -38,7 +38,7 @@ fun main() {
         val nameOut = namesMatch[2]
 
         val stageElements = input.drop(1).map { line ->
-            val numbersInLine = numberRegex.findAll(line).map { it.groupValues.first() }.map { it.toLong() }.toList()
+            val numbersInLine = unsignedIntegerRegex.findAll(line).map { it.groupValues.first() }.map { it.toLong() }.toList()
             StageMapElement(numbersInLine[0], numbersInLine[1], numbersInLine[2])
         }
         return Stage(nameIn, nameOut, stageElements)
@@ -46,7 +46,7 @@ fun main() {
 
     fun parseInput(input: List<String>): Pair<List<Long>, Router> {
         assert(input.first().startsWith("Seeds: "))
-        val seedValues = numberRegex.findAll(input.first().split(":").last())
+        val seedValues = unsignedIntegerRegex.findAll(input.first().split(":").last())
             .map { it.value.toLong() }
             .toList()
         val indsEmpty = input.withIndex().filter { it.value == "" }.map { it.index }

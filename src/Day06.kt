@@ -4,8 +4,8 @@ fun main() {
     }
 
     fun parseInput(input: List<String>): Sequence<Record> {
-        val times = numberRegex.findAll(input[0].split(':')[1]).map { it.groupValues[0].toLong() }
-        val distances = numberRegex.findAll(input[1].split(':')[1]).map { it.groupValues[0].toLong() }
+        val times = unsignedIntegerRegex.findAll(input[0].split(':')[1]).map { it.groupValues[0].toLong() }
+        val distances = unsignedIntegerRegex.findAll(input[1].split(':')[1]).map { it.groupValues[0].toLong() }
         return times.zip(distances).map { Record(it.first, it.second) }
     }
 

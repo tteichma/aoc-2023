@@ -1,7 +1,8 @@
 import kotlin.io.path.Path
 import kotlin.io.path.readLines
 
-val numberRegex = Regex("""\d+""")
+val unsignedIntegerRegex = Regex("""\d+""")
+val signedIntegerRegex = Regex("""-?\d+""")
 
 fun <T> Sequence<T>.repeatInfinitely() = sequence { while (true) yieldAll(this@repeatInfinitely) }
 
