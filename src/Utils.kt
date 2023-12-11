@@ -4,6 +4,10 @@ import kotlin.io.path.readLines
 val unsignedIntegerRegex = Regex("""\d+""")
 val signedIntegerRegex = Regex("""-?\d+""")
 
+typealias IntCoordinate = Pair<Int, Int>
+
+fun <T> MutableSet<T>.pop(): T? = this.first().also{this.remove(it)}
+
 fun <T> Sequence<T>.repeatInfinitely() = sequence { while (true) yieldAll(this@repeatInfinitely) }
 
 fun Long.pow(exp: Int): Long {
