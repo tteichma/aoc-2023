@@ -1,3 +1,6 @@
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlin.io.path.Path
 import kotlin.io.path.readLines
 
@@ -7,7 +10,11 @@ fun getUnsignedIntsFromString(s: String) = unsignedIntegerRegex.findAll(s).map {
 
 typealias IntCoordinate = Pair<Int, Int>
 
-fun <T> MutableSet<T>.pop(): T? = this.first().also{this.remove(it)}
+fun <T> MutableSet<T>.pop(): T? = this.first().also { this.remove(it) }
+
+suspend fun <A, B> Iterable<A>.pmap(f: suspend (A) -> B): List<B> = coroutineScope {
+    map { async { f(it) } }.awaitAll()
+}
 
 fun <T> Sequence<T>.repeatInfinitely() = sequence { while (true) yieldAll(this@repeatInfinitely) }
 
