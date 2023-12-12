@@ -3,6 +3,7 @@ import kotlin.io.path.readLines
 
 val unsignedIntegerRegex = Regex("""\d+""")
 val signedIntegerRegex = Regex("""-?\d+""")
+fun getUnsignedIntsFromString(s: String) = unsignedIntegerRegex.findAll(s).map { it.groupValues[0].toInt() }
 
 typealias IntCoordinate = Pair<Int, Int>
 
