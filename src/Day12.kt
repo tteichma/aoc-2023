@@ -1,6 +1,5 @@
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import kotlin.time.measureTime
 
 fun main() {
     val symWorking = '.'
