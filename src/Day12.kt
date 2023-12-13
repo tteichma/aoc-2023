@@ -9,60 +9,57 @@ fun main() {
 
     data class InputLine(val springs: String, val counts: List<Int>)
 
-    // Function assumes sting only contains WORKING or BROKEN
-    fun getActualGroupsFromString(filled: String, isIncomplete: Boolean): List<Int> {
-        if (filled.isEmpty()) return listOf()
+    fun Char.couldBeWorking() = this == symWorking || this == symUnknown
+    fun Char.couldBeBroken() = this == symBroken || this == symUnknown
 
-        val groups = filled.split(symWorking).map { it.length }.filterNot { it == 0 }
-        return if (isIncomplete && filled.last() == symBroken) groups.dropLast(1) else groups
-    }
+    fun getSolutionCount(pattern: String, expectedGroups: List<Int>): Long {
+        val cache = mutableMapOf<Pair<Int, Int>, Long>()
 
-    fun getFilledQuestionMarks(
-        filled: String,
-        remaining: String,
-        expectedGroups: List<Int>,
-        missingBroken: Int,
-        missingWorking: Int
-    ): Sequence<String> =
-        sequence {
-            if (remaining.isEmpty()) {
-                if (expectedGroups == getActualGroupsFromString(filled, isIncomplete = false)) {
-                    yield(filled)
-                }
-                return@sequence
+        fun evaluateSubSolution(indCharGroupStart: Int, indGroup: Int): Long {
+            // Fulfilled all groups, check if rest could be all working.
+            val key = Pair(indCharGroupStart, indGroup)
+            cache[key]?.also { return it }
+
+            if (indGroup > expectedGroups.lastIndex) {
+                return if (indCharGroupStart > pattern.lastIndex
+                    || pattern.substring(indCharGroupStart..pattern.lastIndex)
+                        .all { it.couldBeWorking() }
+                ) {
+                    1L
+                } else {
+                    0L
+                }.also { cache[key] = it }
             }
 
-            val actualGroups = getActualGroupsFromString(filled, isIncomplete = true)
-            if (actualGroups.zip(expectedGroups).any { it.first != it.second }) return@sequence
+            val thisGroupSize = expectedGroups[indGroup]
+            if (indCharGroupStart + thisGroupSize - 1 > pattern.lastIndex) {
+                cache[key] = 0L
+                return 0L
+            }
 
-            val splitRemaining = remaining.drop(1).split(symUnknown)
-            val nextFilledChunk = splitRemaining.first()  // Between upcoming two unknowns
-            val nextRemaining = if (splitRemaining.size == 1) "" else symUnknown + splitRemaining.drop(1)
-                .joinToString(symUnknown.toString())
-            if (missingWorking < 0) {
-                yieldAll(
-                    getFilledQuestionMarks(
-                        filled + symWorking + nextFilledChunk,
-                        nextRemaining,
-                        expectedGroups,
-                        missingBroken,
-                        missingWorking + 1
-                    )
-                )
+            val countWithShiftedStart = if (pattern[indCharGroupStart].couldBeWorking()) {
+                evaluateSubSolution(indCharGroupStart + 1, indGroup)
+            } else {
+                0
             }
-            if (missingBroken < 0) {
-                yieldAll(
-                    getFilledQuestionMarks(
-                        filled + symBroken + nextFilledChunk,
-                        nextRemaining,
-                        expectedGroups,
-                        missingBroken + 1,
-                        missingWorking
-                    )
-                )
+
+            if (!pattern[indCharGroupStart].couldBeBroken()) {
+                return countWithShiftedStart.also { cache[key] = it }
             }
+
+
+            val indAfterGroup = indCharGroupStart + thisGroupSize
+            return (countWithShiftedStart + if (pattern.substring(indCharGroupStart..<indAfterGroup)
+                    .all { it.couldBeBroken() }
+                && pattern.getOrNull(indAfterGroup)?.couldBeWorking() != false
+            ) {
+                evaluateSubSolution(indAfterGroup + 1, indGroup + 1)
+            } else {
+                0L
+            }).also { cache[key] = it }
         }
-
+        return evaluateSubSolution(0, 0)
+    }
 
     fun parseInput(input: List<String>): List<InputLine> {
         return input.map {
@@ -74,25 +71,10 @@ fun main() {
     fun solve(input: List<String>, repeat: Int): Long {
         val lines = parseInput(input)
         val solutionCounts = runBlocking(Dispatchers.Default) {
-            lines.pmap { line ->
-                val lineString: String
-                val groups: List<Int>
-                val count: Long
-
-                val duration = measureTime {
-                    lineString = (1..repeat).joinToString(symUnknown.toString()) { line.springs }
-                    groups = (1..repeat).flatMap { line.counts }
-
-                    count = getFilledQuestionMarks(
-                        lineString.takeWhile { it != symUnknown },
-                        lineString.dropWhile { it != symUnknown },
-                        groups,
-                        lineString.count { it == symBroken } - groups.sum(),
-                        lineString.count { it == symWorking } - (lineString.length - groups.sum())
-                    ).count().toLong()
-                }
-//                println("${count}\t${duration.inWholeSeconds}s\t$lineString $groups")
-                count
+            lines.map { line ->
+                val lineString = (1..repeat).joinToString(symUnknown.toString()) { line.springs }
+                val groups = (1..repeat).flatMap { line.counts }
+                getSolutionCount(lineString, groups)
             }
         }
         return solutionCounts.sum()
