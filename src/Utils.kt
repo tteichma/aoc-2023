@@ -18,6 +18,22 @@ suspend fun <A, B> Iterable<A>.pmap(f: suspend (A) -> B): List<B> = coroutineSco
 
 fun <T> Sequence<T>.repeatInfinitely() = sequence { while (true) yieldAll(this@repeatInfinitely) }
 
+fun <T> List<List<T>>.rotateRight(): List<List<T>> {
+    val lastOldColIndex = this.first().lastIndex
+    val lastOldRowIndex = this.lastIndex
+    return (0..lastOldColIndex).map { iNewRow ->
+        (0..lastOldRowIndex).map { this[lastOldRowIndex - it][iNewRow] }
+    }
+}
+
+fun <T> List<List<T>>.rotateLeft(): List<List<T>> {
+    val lastOldColIndex = this.first().lastIndex
+    val lastOldRowIndex = this.lastIndex
+    return (lastOldColIndex downTo 0).map { iNewRow ->
+        (0..lastOldRowIndex).map { this[it][iNewRow] }
+    }
+}
+
 fun Long.pow(exp: Int): Long {
     if (exp == 0) return 1L
     var out = this
@@ -56,6 +72,9 @@ fun getLcm(a: Long, b: Long): Long {
  * Reads lines from the given input txt file.
  */
 fun readInput(name: String) = Path("src/$name.txt").readLines()
+fun List<String>.toCharLists() = this.map { it.toList() }
+
+fun List<String>.println() = println(this.joinToString("\n"))
 
 /**
  * The cleaner shorthand for printing output.
