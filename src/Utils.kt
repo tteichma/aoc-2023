@@ -9,6 +9,7 @@ val signedIntegerRegex = Regex("""-?\d+""")
 fun getUnsignedIntsFromString(s: String) = unsignedIntegerRegex.findAll(s).map { it.groupValues[0].toInt() }
 
 typealias IntCoordinate = Pair<Int, Int>
+operator fun <T> List<List<T>>.get(coordinate: IntCoordinate) = this[coordinate.first][coordinate.second]
 
 fun <T> MutableSet<T>.pop(): T? = this.first().also { this.remove(it) }
 
