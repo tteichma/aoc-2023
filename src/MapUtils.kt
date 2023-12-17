@@ -4,10 +4,21 @@ sealed class Direction(val nextCoordinate: (IntCoordinate) -> IntCoordinate) {
     data object UD : Direction({ Pair(it.first + 1, it.second) })
     data object DU : Direction({ Pair(it.first - 1, it.second) })
 
-    fun getRightAngleDirs() = rightAngleDirs[this] ?: listOf()
+    val opposite
+        get() = oppositeDirs[this]!!
+    val perpendicular
+        get() = perpendicularDirsLists[this] ?: listOf()
 
     companion object {
-        private val rightAngleDirs by lazy {
+        private val oppositeDirs by lazy {
+            mapOf(
+                LR to RL,
+                RL to LR,
+                UD to DU,
+                DU to UD
+            )
+        }
+        private val perpendicularDirsLists by lazy {
             mapOf(
                 LR to listOf(UD, DU),
                 RL to listOf(UD, DU),
