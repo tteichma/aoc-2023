@@ -1,51 +1,43 @@
-sealed class Day16Direction(val nextCoordinate: (IntCoordinate) -> IntCoordinate) {
-    data object LR : Day16Direction({ Pair(it.first, it.second + 1) })
-    data object RL : Day16Direction({ Pair(it.first, it.second - 1) })
-    data object UD : Day16Direction({ Pair(it.first + 1, it.second) })
-    data object DU : Day16Direction({ Pair(it.first - 1, it.second) })
-}
-
-
 sealed class Day16Cell {
-    abstract fun getNextDirections(inDir: Day16Direction): List<Day16Direction>
+    abstract fun getNextDirections(inDir: Direction): List<Direction>
     fun handleBeam(beamElement: Day16BeamElement) = getNextDirections(beamElement.direction).map {
         Day16BeamElement(it.nextCoordinate(beamElement.coordinate), it)
     }
 
     data object SplitterVertical : Day16Cell() {
-        override fun getNextDirections(inDir: Day16Direction) = when (inDir) {
-            Day16Direction.LR, Day16Direction.RL -> listOf(Day16Direction.UD, Day16Direction.DU)
+        override fun getNextDirections(inDir: Direction) = when (inDir) {
+            Direction.LR, Direction.RL -> listOf(Direction.UD, Direction.DU)
             else -> listOf(inDir)
         }
     }
 
     data object SplitterHorizontal : Day16Cell() {
-        override fun getNextDirections(inDir: Day16Direction) = when (inDir) {
-            Day16Direction.UD, Day16Direction.DU -> listOf(Day16Direction.LR, Day16Direction.RL)
+        override fun getNextDirections(inDir: Direction) = when (inDir) {
+            Direction.UD, Direction.DU -> listOf(Direction.LR, Direction.RL)
             else -> listOf(inDir)
         }
     }
 
     data object MirrorBackward : Day16Cell() {
-        override fun getNextDirections(inDir: Day16Direction) = when (inDir) {
-            Day16Direction.UD -> listOf(Day16Direction.LR)
-            Day16Direction.DU -> listOf(Day16Direction.RL)
-            Day16Direction.LR -> listOf(Day16Direction.UD)
-            Day16Direction.RL -> listOf(Day16Direction.DU)
+        override fun getNextDirections(inDir: Direction) = when (inDir) {
+            Direction.UD -> listOf(Direction.LR)
+            Direction.DU -> listOf(Direction.RL)
+            Direction.LR -> listOf(Direction.UD)
+            Direction.RL -> listOf(Direction.DU)
         }
     }
 
     data object MirrorForward : Day16Cell() {
-        override fun getNextDirections(inDir: Day16Direction) = when (inDir) {
-            Day16Direction.UD -> listOf(Day16Direction.RL)
-            Day16Direction.DU -> listOf(Day16Direction.LR)
-            Day16Direction.LR -> listOf(Day16Direction.DU)
-            Day16Direction.RL -> listOf(Day16Direction.UD)
+        override fun getNextDirections(inDir: Direction) = when (inDir) {
+            Direction.UD -> listOf(Direction.RL)
+            Direction.DU -> listOf(Direction.LR)
+            Direction.LR -> listOf(Direction.DU)
+            Direction.RL -> listOf(Direction.UD)
         }
     }
 
     data object Empty : Day16Cell() {
-        override fun getNextDirections(inDir: Day16Direction) = listOf(inDir)
+        override fun getNextDirections(inDir: Direction) = listOf(inDir)
     }
 
     companion object {
@@ -61,7 +53,7 @@ sealed class Day16Cell {
     }
 }
 
-data class Day16BeamElement(val coordinate: IntCoordinate, val direction: Day16Direction)
+data class Day16BeamElement(val coordinate: IntCoordinate, val direction: Direction)
 
 class Day16MirrorMap(val data: List<List<Day16Cell>>) {
     private fun Day16BeamElement.isWithinBoundaries() =
@@ -100,7 +92,7 @@ fun main() {
 
     fun part1(input: List<String>): Int {
         val mirrorMap = parseInput(input)
-        return mirrorMap.getNumberOfEnergizedCells(Day16BeamElement(Pair(0, 0), Day16Direction.LR))
+        return mirrorMap.getNumberOfEnergizedCells(Day16BeamElement(Pair(0, 0), Direction.LR))
     }
 
     fun part2(input: List<String>): Int {
@@ -108,10 +100,10 @@ fun main() {
         val lastRowIndex = mirrorMap.data.lastIndex
         val lastColumnIndex = mirrorMap.data.first().lastIndex
         val entryElements = (
-                (0..lastRowIndex).map { Day16BeamElement(Pair(it, 0), Day16Direction.LR) }
-                        + (0..lastRowIndex).map { Day16BeamElement(Pair(it, lastColumnIndex), Day16Direction.RL) }
-                        + (0..lastColumnIndex).map { Day16BeamElement(Pair(0, it), Day16Direction.UD) }
-                        + (0..lastColumnIndex).map { Day16BeamElement(Pair(lastColumnIndex, it), Day16Direction.DU) }
+                (0..lastRowIndex).map { Day16BeamElement(Pair(it, 0), Direction.LR) }
+                        + (0..lastRowIndex).map { Day16BeamElement(Pair(it, lastColumnIndex), Direction.RL) }
+                        + (0..lastColumnIndex).map { Day16BeamElement(Pair(0, it), Direction.UD) }
+                        + (0..lastColumnIndex).map { Day16BeamElement(Pair(lastColumnIndex, it), Direction.DU) }
                 )
         return entryElements.maxOf { mirrorMap.getNumberOfEnergizedCells(it) }
     }
