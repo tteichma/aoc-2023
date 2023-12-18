@@ -6,9 +6,13 @@ fun main() {
 
     data class Instruction(val direction: Direction, val length: Int)
 
-    class DiggingMap(data: List<List<Char>>) : DataMap<Char>(data) {
-        fun countDigged() = data.sumOf { row ->
-            row.count { it == symTrench }.toLong()
+    class DiggingMap(
+        data: List<List<Char>>,
+        val rowWidths: List<Long>,
+        val columnWidths: List<Long>
+    ) : DataMap<Char>(data) {
+        fun countDigged() = rowIndices.sumOf { indRow ->
+            colIndices.filter { data[indRow][it] == symTrench }.sumOf { rowWidths[indRow] * columnWidths[it] }
         }
 
 
@@ -34,7 +38,8 @@ fun main() {
             val filledData = data.mapIndexed { indRow, row ->
                 List(row.size) { indCol -> if (Pair(indRow, indCol) in coordinatesOutside) symOrig else symTrench }
             }
-            return DiggingMap(filledData)
+
+            return DiggingMap(filledData, rowWidths, columnWidths)
         }
 
     }
@@ -84,19 +89,45 @@ fun main() {
             }
             .runningFold(0) { r, it -> r + it }
 
-        val cells =
-            MutableList(foldedRows.max() - foldedRows.min() + 1) { MutableList(foldedCols.max() - foldedCols.min() + 1) { symOrig } }
+        val rowCoordinates = foldedRows
+            .flatMap { listOf(it - 1, it + 1, it) }
+            .toSet()
+            .sorted()
+        val colCoordinates = foldedCols
+            .flatMap { listOf(it - 1, it + 1, it) }
+            .toSet()
+            .sorted()
 
-        var coordinate = Pair(-foldedRows.min(), -foldedCols.min())
+        val cells =
+            MutableList(rowCoordinates.size) { MutableList(colCoordinates.size) { symOrig } }
+
+        var coordinateIndex = Pair(rowCoordinates.indexOfFirst { it == 0 }, colCoordinates.indexOfFirst { it == 0 })
 
         for (instruction in instructions) {
-            repeat(instruction.length) {
-                cells[coordinate.first][coordinate.second] = symTrench
-                coordinate = instruction.direction.nextCoordinate(coordinate)
+            val rowStart = rowCoordinates[coordinateIndex.first]
+            val colStart = colCoordinates[coordinateIndex.second]
+
+            val rowDest = when (instruction.direction) {
+                Direction.UD -> rowStart + instruction.length
+                Direction.DU -> rowStart - instruction.length
+                else -> rowStart
+            }
+            val colDest = when (instruction.direction) {
+                Direction.LR -> colStart + instruction.length
+                Direction.RL -> colStart - instruction.length
+                else -> colStart
+            }
+
+            while (rowCoordinates[coordinateIndex.first] != rowDest || colCoordinates[coordinateIndex.second] != colDest) {
+                cells[coordinateIndex.first][coordinateIndex.second] = symTrench
+                coordinateIndex = instruction.direction.nextCoordinate(coordinateIndex)
             }
         }
 
-        return DiggingMap(cells)
+        val rowWidths = listOf(1L) + rowCoordinates.windowed(2).map { it[1].toLong() - it[0].toLong() }
+        val colWidths = listOf(1L) + colCoordinates.windowed(2).map { it[1].toLong() - it[0].toLong() }
+
+        return DiggingMap(cells, rowWidths, colWidths)
     }
 
     fun part1(input: List<String>): Long {
