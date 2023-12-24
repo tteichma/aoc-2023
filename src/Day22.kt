@@ -2,12 +2,22 @@ fun main() {
     data class Block(val id: Int, val x: IntRange, val y: IntRange, val z: IntRange)
 
     data class BlockGroup(val blocks: List<Block>) {
-        fun getRemovableBlocks(): List<Block> {
-            val blocksToSupportingBlocks = getBlocksToSupportingBlocks()
-            val removableBlocks = blocks.filter { block ->
-                blocksToSupportingBlocks.values.all { it.size > 1 || block !in it }
-            }
-            return removableBlocks
+        fun getNumRemovableBlocks() = blocks
+            .indices
+            .map { BlockGroup(blocks.filterIndexed { ind, _ -> ind != it }) }
+            .count { it.getNumMovedBlocksAfterFalling() == 0}
+
+
+        fun getRemovalNumber() = blocks
+            .indices
+            .map { BlockGroup(blocks.filterIndexed { ind, _ -> ind != it }) }
+            .sumOf { it.getNumMovedBlocksAfterFalling().toLong()}
+
+
+        fun getNumMovedBlocksAfterFalling(): Int {
+            val blocksAfterFallingById = getBlockGroupAfterFalling().blocks.associateBy { it.id }
+            val result = blocks.count { it != blocksAfterFallingById[it.id] }
+            return result
         }
 
         fun getBlockGroupAfterFalling(): BlockGroup {
@@ -47,17 +57,18 @@ fun main() {
 
     fun part1(input: List<String>): Long {
         val blockGroup = parseInput(input).getBlockGroupAfterFalling()
-        return blockGroup.getRemovableBlocks().size.toLong()
+        return blockGroup.getNumRemovableBlocks().toLong()
     }
 
     fun part2(input: List<String>): Long {
-        return part1(input)
+        val blockGroup = parseInput(input).getBlockGroupAfterFalling()
+        return blockGroup.getRemovalNumber()
     }
 
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day22_test")
     check(part1(testInput) == 5L) { "Wrong solution: ${part1(testInput)}" }
-    check(part2(testInput) == 5L) { "Wrong solution: ${part2(testInput)}" }
+    check(part2(testInput) == 7L) { "Wrong solution: ${part2(testInput)}" }
 
     val input = readInput("Day22")
     part1(input).println()
