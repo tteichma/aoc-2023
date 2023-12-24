@@ -41,6 +41,8 @@ open class DataMap<T>(val data: List<List<T>>) {
 
     val lastRowIndex = data.lastIndex
     val lastColIndex = data.first().lastIndex
+    val rowSize = data.size
+    val colSize = data.first().size
 
     val rowIndices = data.indices
     val colIndices = data.first().indices
