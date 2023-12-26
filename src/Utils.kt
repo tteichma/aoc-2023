@@ -7,6 +7,7 @@ import kotlin.io.path.readLines
 val unsignedIntegerRegex = Regex("""\d+""")
 val signedIntegerRegex = Regex("""-?\d+""")
 fun getUnsignedIntsFromString(s: String) = unsignedIntegerRegex.findAll(s).map { it.groupValues[0].toInt() }
+fun getSignedDoublesFromString(s: String) = signedIntegerRegex.findAll(s).map { it.groupValues[0].toDouble() }
 
 typealias IntCoordinate = Pair<Int, Int>
 operator fun <T> List<List<T>>.get(coordinate: IntCoordinate) = this[coordinate.first][coordinate.second]
