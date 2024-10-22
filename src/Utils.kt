@@ -6,6 +6,7 @@ import kotlin.io.path.readLines
 
 val unsignedIntegerRegex = Regex("""\d+""")
 val signedIntegerRegex = Regex("""-?\d+""")
+fun getLongsFromString(s: String) = signedIntegerRegex.findAll(s).map { it.groupValues[0].toLong() }
 fun getUnsignedIntsFromString(s: String) = unsignedIntegerRegex.findAll(s).map { it.groupValues[0].toInt() }
 fun getSignedDoublesFromString(s: String) = signedIntegerRegex.findAll(s).map { it.groupValues[0].toDouble() }
 
