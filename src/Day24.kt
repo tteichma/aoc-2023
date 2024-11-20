@@ -1,4 +1,5 @@
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 fun main() {
     data class HailTrajectory2d(val px: Double, val py: Double, val vx: Double, val vy: Double) {
@@ -67,15 +68,11 @@ fun main() {
         }
     }
 
-    fun getDivisorsWithSameSign(number: Long): Sequence<Long> = sequence {
-        if (number < 0) {
-            yieldAll(getDivisorsWithSameSign(-number).map { -it })
-        }
-
+    fun getDivisors(positiveNumber: Long): Sequence<Long> = sequence {
         yield(1)
-        var n = number
+        var n = positiveNumber
         val seenDivisors = mutableSetOf<Long>(1)
-        for (i in 2..n / 2) {
+        for (i in 2..sqrt(n.toDouble()).toLong() + 1) {
             while (n % i == 0L) {
                 val unseenDivisors = seenDivisors.map { it * i }.filterNot { it in seenDivisors }
                 yieldAll(unseenDivisors)
@@ -88,36 +85,106 @@ fun main() {
         }
     }
 
-    fun getPosFromComponentPair(
-        pVPairs: List<Pair<Long, Long>>,
-        initialTimes: List<Long?> = List(pVPairs.size) {null}
-    ): Pair<Long, List<Long?>> {
-        val firstPVIndex = initialTimes.indexOf(1)
-        val firstPVPairCandidates = if (firstPVIndex != -1) listOf(pVPairs[firstPVIndex]) else pVPairs
-        for (firstPVCandidate in firstPVPairCandidates) {
-            val firstPVCandidateAtT1 = Pair(firstPVCandidate.first + firstPVCandidate.second, firstPVCandidate.second)
-            val (deltaP, v2) = pVPairs
-                .map { Pair(it.first + it.second, it.second) }  // at t=1
-                .map { Pair(it.first - firstPVCandidateAtT1.first, it.second) }
-                .filter { it.first != 0L }
-                .minBy { abs(it.first) }
-            for (divisor in getDivisorsWithSameSign(deltaP)) {
-                val vCandidate = divisor + v2
-                val pCandidate = firstPVCandidateAtT1.first - vCandidate
-                val candidateTimes= pVPairs.map { if (vCandidate != it.second) (it.first - pCandidate) / (vCandidate - it.second) else null}
-                val times = initialTimes.zip(candidateTimes).map {
-                    when {
-                        it.first == it.second -> it.first
-                        it.second == null -> it.first
-                        it.first == null -> it.second
-                        else -> -999  // will fail next condition
+    fun getDivisorsWithAnySign(number: Long): Sequence<Long> = getDivisors(abs(number)).flatMap { sequenceOf(it, -it) }
 
-                    }
-                }
-                if (times.all { it== null || it > 0 } && pVPairs.zip(times).all  {(pV, t )-> t == null || (pV.first + pV.second * t == pCandidate + vCandidate * t) }) {
-                    return Pair(pCandidate, times)
-                }
+    fun getVCandidatesFromPvPairsWithSameSpeed(pVPairsWithSameSpeed: List<Pair<Long, Long>>): Set<Long> {
+        val particleV = pVPairsWithSameSpeed.first().second
+        val deltaPCandidates = pVPairsWithSameSpeed
+            .map { pVRef ->
+                pVPairsWithSameSpeed
+                    .filter { it.first != pVRef.first }
+                    .map { pVRef.first - it.first }
             }
+        val vCandidates = deltaPCandidates.flatMap { deltaPsWithSameRef ->
+            deltaPsWithSameRef
+                .map {
+                    getDivisorsWithAnySign(it)
+                        .map { v -> v + particleV }
+                        .toSet()
+                }
+        }
+            .reduce { acc, candidateSet -> acc.intersect(candidateSet) }
+        return vCandidates
+    }
+
+    fun getPosFromComponentPairs(
+        pVPairs: List<Pair<Long, Long>>,
+        initialTimes: List<Long?> = List(pVPairs.size) { null }
+    ): Pair<Long, List<Long?>> {
+        // Given a pair of particles r and i, we have the following equation:
+        //     pr + vr * tr + v * (ti - tr) == pi + vi * ti
+        //         where tx is time of collision with particle x, v is the throw speed we solve for.
+        // Grouping particles such that vr == vi, we get:
+        //    pr - pi == (v - vi) * (tr - ti)
+        // As all numbers are integers (v - vi) must be a divisor of (pr - pi)
+
+        val pVPairGroupsWithSameSpeed = pVPairs
+            .groupBy { it.second }
+            .values
+            .map { it.toSet().toList() }
+            .filter { it.size > 1 }
+            .sortedBy { -it.size }
+
+        val vCandidates = pVPairGroupsWithSameSpeed
+            .map { getVCandidatesFromPvPairsWithSameSpeed(it) }
+            .reduce { acc, candidateSet -> acc.intersect(candidateSet) }
+
+        if (initialTimes.any { it != null }) {
+            for (vCandidate in vCandidates) {
+                val (pV, t) = pVPairs.zip(initialTimes).first { it.second != null }
+
+                // Checking the many times from the previous time-step seems good enough.
+                val pCandidate = pV.first + (pV.second - vCandidate) * t!!
+                if (pVPairs.zip(initialTimes).any { (pV, t) ->
+                        (t != null) && (pCandidate + vCandidate * t != pV.first + pV.second * t)
+                    }) {
+                    continue
+                }
+
+                return Pair(pCandidate, initialTimes)
+            }
+        }
+
+        val pVCandidates = sequence {
+            val vSequenceDeque = ArrayDeque<Pair<Iterator<Long>, Long>>(
+                vCandidates.map { v ->
+                    val pMin = pVPairs.filter { it.second >= v }.maxOfOrNull { it.first + (it.second - v) } ?: 1
+                    val pMax = pVPairs.filter { it.second <= v }.minOfOrNull { it.first + (it.second - v) }
+                        ?: Long.MAX_VALUE
+
+                    Pair((pMin..pMax).iterator(), v)
+                }
+            )
+
+            while (vSequenceDeque.isNotEmpty()) {
+                val vAndNextPVSequence = vSequenceDeque.removeFirst()
+                if (!vAndNextPVSequence.first.hasNext()) {
+                    continue
+                }
+
+                yield(Pair(vAndNextPVSequence.first.next(), vAndNextPVSequence.second))
+                vSequenceDeque.add(vAndNextPVSequence)
+            }
+        }
+
+        for ((pCandidate, vCandidate) in pVCandidates) {
+            val tCandidates = pVPairs.map {
+                if (vCandidate != it.second) (it.first - pCandidate) / (vCandidate - it.second) else null
+            }
+
+            val initialAndCandidateTimes = initialTimes.zip(tCandidates)
+
+            if (pVPairs.zip(tCandidates).any { (pV, t) ->
+                    (t != null) && (pCandidate + vCandidate * t != pV.first + pV.second * t)
+                }) {
+                continue
+            }
+
+            if (initialAndCandidateTimes.any { it.first != null && it.second != null && it.first != it.second }) {
+                continue
+            }
+
+            return Pair(pCandidate, initialAndCandidateTimes.map { it.first ?: it.second })
         }
 
         throw Error("Seems I missed some edge case.")
@@ -132,9 +199,14 @@ fun main() {
 
         val trajectories = parseInputPart2(input)
 
-        val (px, xTimes) = getPosFromComponentPair(trajectories.map { Pair(it.px, it.vx) })
-        val (py, yTimes) = getPosFromComponentPair(trajectories.map { Pair(it.py, it.vy) }, xTimes)
-        val (pz, _) = getPosFromComponentPair(trajectories.map { Pair(it.pz, it.vz) }, yTimes)
+        println("Evaluating y...")
+        val (py, yTimes) = getPosFromComponentPairs(
+            trajectories.map { Pair(it.py, it.vy) }
+        )
+        println("Evaluating x...")
+        val (px, xTimes) = getPosFromComponentPairs(trajectories.map { Pair(it.px, it.vx) }, yTimes)
+        println("Evaluating z...")
+        val (pz, _) = getPosFromComponentPairs(trajectories.map { Pair(it.pz, it.vz) }, xTimes)
         return (px + py + pz)
     }
 
