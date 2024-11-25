@@ -33,6 +33,12 @@ sealed class Direction(val nextCoordinate: (IntCoordinate) -> IntCoordinate) {
     }
 }
 
+operator fun IntCoordinate.plus(direction: Direction) = when (direction) {
+    Direction.DU -> Pair(this.first - 1, this.second)
+    Direction.UD -> Pair(this.first + 1, this.second)
+    Direction.RL -> Pair(this.first, this.second - 1)
+    Direction.LR -> Pair(this.first, this.second + 1)
+}
 
 open class DataMap<T>(val data: List<List<T>>) {
     init {
@@ -50,5 +56,5 @@ open class DataMap<T>(val data: List<List<T>>) {
     protected fun IntCoordinate.isWithinBoundaries() =
         (this.first in rowIndices && this.second in colIndices)
 
-    override fun toString() = data.joinToString("\n") { row->row.joinToString("") }
+    override fun toString() = data.joinToString("\n") { row -> row.joinToString("") }
 }

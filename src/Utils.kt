@@ -3,6 +3,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlin.io.path.Path
 import kotlin.io.path.readLines
+import kotlin.time.measureTime
 
 val unsignedIntegerRegex = Regex("""\d+""")
 val signedIntegerRegex = Regex("""-?\d+""")
@@ -10,7 +11,14 @@ fun getLongsFromString(s: String) = signedIntegerRegex.findAll(s).map { it.group
 fun getUnsignedIntsFromString(s: String) = unsignedIntegerRegex.findAll(s).map { it.groupValues[0].toInt() }
 fun getSignedDoublesFromString(s: String) = signedIntegerRegex.findAll(s).map { it.groupValues[0].toDouble() }
 
+fun Int.isEven() = this % 2 == 0
+fun Int.isOdd() = this % 2 != 0
+fun Long.isEven() = this % 2 == 0L
+fun Long.isOdd() = this % 2 != 0L
+
+// Note: Coordinates are (0, 0) is top left, (x, 0) is bottom left, (y, 0) is top right!
 typealias IntCoordinate = Pair<Int, Int>
+
 operator fun <T> List<List<T>>.get(coordinate: IntCoordinate) = this[coordinate.first][coordinate.second]
 
 fun <T> MutableSet<T>.pop(): T? = this.first().also { this.remove(it) }
@@ -83,3 +91,24 @@ fun List<String>.println() = println(this.joinToString("\n"))
  * The cleaner shorthand for printing output.
  */
 fun Any?.println() = println(this)
+
+fun <T> profiledExecute(label: String? = null, f: () -> T): T {
+    val out: T
+    val duration = measureTime { out = f() }
+
+    if (label != null) {
+        println("Executed $label in $duration.")
+    } else {
+        println("Executed in $duration.")
+    }
+    return out
+}
+
+fun <T> profiledCheck(expected: T, label: String? = null, f: () -> T) {
+    val result = profiledExecute(label, f)
+
+    check(result == expected) {
+        if (label == null) "Wrong solution for $label: $result (expected $expected)" else "Wrong solution: $result (expected $expected)"
+    }
+}
+
